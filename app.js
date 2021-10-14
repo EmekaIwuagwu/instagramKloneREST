@@ -2,6 +2,8 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var mysql = require('mysql');
+var multer = require('multer');
+var path = require('path');
 var port = process.env.PORT || 3000;
 
 app.use(function (req, res, next) {
@@ -73,6 +75,31 @@ app.get('/api/posts/:username', function(req,res){
 		if(error) throw error;
 		return res.send({ error:false, data: results, message: 'posts.' });
 	});
+});
+
+const storage = multer.diskStorage({
+    destination: 'upload/images',
+    filename : (req, file, cb) =>{
+        return cb(null, `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`);
+    }
+});
+
+const upload = multer({
+    storage : storage
+});
+
+app.use('/postimages',express.static('upload/images'));
+app.post('/api/createpost', upload.single('postImg'), (req,res) =>{
+    var username = req.body.username;
+    var imgUrl = `https://instagramklone-restapi.herokuapp.com/postimages/${req.file.filename}`;
+    var post = req.body.post;
+
+    let sqlinsert = 'INSERT INTO `instagramclonedbposts` (username, imgUrl, post) VALUES (?,?,?)';
+    dbConn.query(sqlinsert,[username, imgUrl, post], function(error, results, fields){
+            if(error) throw error;
+                return res.send({error:false, message: 'Post Created'});
+            });
+
 });
 
 app.listen(port,function(){
